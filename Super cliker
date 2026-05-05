@@ -1,0 +1,294 @@
+index.html
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>Epic Clicker Znanego</title>
+
+<style>
+body {
+  font-family: Arial;
+  text-align: center;
+  background: #f7f7fa;
+  max-width: 500px;
+  margin: auto;
+  transition: 0.3s;
+}
+
+#counter { font-size: 60px; margin: 10px; }
+#stats, #level { margin: 5px; }
+
+button {
+  width: 95%;
+  padding: 10px;
+  margin: 5px;
+  border: 0;
+  border-radius: 8px;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.main-btn { background: green; color: white; }
+.upgrade-btn { background: #007bff; color: white; }
+
+.floating {
+  position: absolute;
+  font-size: 20px;
+  font-weight: bold;
+  animation: floatUp 1s ease-out forwards;
+}
+
+@keyframes floatUp {
+  0% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-50px); }
+}
+</style>
+</head>
+
+<body>
+
+<h1>Epic Clicker Znanego 💥</h1>
+
+<div id="counter">0</div>
+<div id="stats"></div>
+<div id="level"></div>
+
+<button class="main-btn" onclick="clickHandler()">KLIK</button>
+
+<h2>Ulepszenia</h2>
+
+<button class="upgrade-btn" onclick="buyUpgrade('clickPower')">
+Power
+</button>
+
+<button class="upgrade-btn" onclick="buyUpgrade('autoClicker')">
+Auto
+</button>
+
+<button class="upgrade-btn" onclick="buyUpgrade('factory')">
+Fabryka
+</button>
+
+<h2>Boss</h2>
+<button class="upgrade-btn" onclick="spawnBoss()">Spawn Bossa</button>
+<div id="bossHp"></div>
+
+<h2>Świat</h2>
+<button class="upgrade-btn" onclick="switchWorld()">Zmień świat</button>
+<div id="world"></div>
+
+<h2>REBIRTH / PRESTIGE</h2>
+<button class="upgrade-btn" onclick="rebirth()">REBIRTH</button>
+<button class="upgrade-btn" onclick="prestige()">PRESTIGE</button>
+
+<div>Rebirth: <span id="rebirth"></span></div>
+<div>Prestige: <span id="prestige"></span></div>
+
+<script>
+
+let game = {
+  points: 0,
+  clickPower: 1,
+  autoClickers: 0,
+  factories: 0,
+
+  multiplier: 1,
+  prestigeMultiplier: 1,
+
+  level: 1,
+  exp: 0,
+  expToNext: 50,
+
+  rebirths: 0,
+  prestige: 0,
+
+  world: "Start",
+
+  difficulty: 1,
+  gameTime: 0,
+
+  boss: {
+    active: false,
+    hp: 0,
+    maxHp: 0
+  }
+};
+
+// 🖱 CLICK
+function clickHandler() {
+  let gain =
+    game.clickPower *
+    game.multiplier *
+    game.prestigeMultiplier;
+
+  gain = gain / game.difficulty;
+
+  game.points += gain;
+
+  game.exp += 5;
+  levelUp();
+
+  hitBoss();
+  showFloating(Math.floor(gain));
+
+  update();
+}
+
+// 📈 LEVEL
+function levelUp() {
+  while (game.exp >= game.expToNext) {
+    game.exp -= game.expToNext;
+    game.level++;
+    game.expToNext *= 1.5;
+    game.multiplier += 0.5;
+  }
+}
+
+// 💥 FLOAT
+function showFloating(t) {
+  const el = document.createElement("div");
+  el.className = "floating";
+  el.textContent = "+" + t;
+  el.style.left = window.innerWidth/2 + "px";
+  el.style.top = window.innerHeight/2 + "px";
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),1000);
+}
+
+// 🛒 UPGRADE
+function buyUpgrade(type) {
+
+  if (type === "clickPower") {
+    if (game.points < 30) return;
+    game.points -= 30;
+    game.clickPower++;
+  }
+
+  if (type === "autoClicker") {
+    if (game.points < 50) return;
+    game.points -= 50;
+    game.autoClickers++;
+  }
+
+  if (type === "factory") {
+    if (game.points < 200) return;
+    game.points -= 200;
+    game.factories++;
+  }
+
+  update();
+}
+
+// 🏭 LOOP
+function loop() {
+
+  game.gameTime++;
+
+  if (game.gameTime % 30 === 0) {
+    game.difficulty += 0.5;
+  }
+
+  let income =
+    (game.autoClickers + game.factories * 5) /
+    game.difficulty;
+
+  game.points += income;
+
+  if (game.boss.active) bossAI();
+
+  update();
+}
+
+// 👹 BOSS
+function spawnBoss() {
+  game.boss.active = true;
+  game.boss.maxHp = (200 + game.level * 50) * game.difficulty;
+  game.boss.hp = game.boss.maxHp;
+}
+
+function hitBoss() {
+  if (!game.boss.active) return;
+
+  game.boss.hp -= game.clickPower * game.multiplier;
+
+  if (game.boss.hp <= 0) {
+    game.boss.active = false;
+    game.points += 2000;
+  }
+}
+
+function bossAI() {
+  if (Math.random() < 0.1) {
+    game.points = Math.max(0, game.points - 20);
+  }
+}
+
+// 🌍 MAPA
+function switchWorld() {
+  if (game.world === "Start") game.world = "City";
+  else if (game.world === "City") game.world = "Space";
+  else game.world = "Start";
+
+  update();
+}
+
+// 🔥 REBIRTH
+function rebirth() {
+  if (game.points < 1000) return;
+
+  game.rebirths++;
+  game.multiplier++;
+
+  game.points = 0;
+  game.clickPower = 1;
+  game.autoClickers = 0;
+  game.factories = 0;
+
+  update();
+}
+
+// 💀 PRESTIGE
+function prestige() {
+  if (game.points < 10000) return;
+
+  game.prestige++;
+  game.prestigeMultiplier++;
+
+  game.points = 0;
+
+  update();
+}
+
+// 💾 UPDATE
+function update() {
+
+  document.getElementById("counter").textContent =
+    Math.floor(game.points);
+
+  document.getElementById("level").textContent =
+    `Lvl ${game.level} | EXP ${game.exp}/${game.expToNext}`;
+
+  document.getElementById("world").textContent =
+    "Świat: " + game.world;
+
+  document.getElementById("rebirth").textContent =
+    game.rebirths;
+
+  document.getElementById("prestige").textContent =
+    game.prestige;
+
+  document.getElementById("bossHp").textContent =
+    game.boss.active
+      ? `HP: ${Math.floor(game.boss.hp)}`
+      : "Brak bossa";
+}
+
+// ⏱ LOOP
+setInterval(loop, 1000);
+
+update();
+
+</script>
+
+</body>
+</html>
